@@ -19,6 +19,10 @@ Utforske hvordan en kan bruke regel-uthenting på maskinlæringsmodeller for svi
 - Anchor
 - DiCE
 
+## Datasets
+
+- [Credit Card Transactions Fraud Detection Dataset](https://www.kaggle.com/datasets/kartik2112/fraud-detection/data )
+
 ## Oppgave krav
 
 **Deadline**: May 8th, 16:00
