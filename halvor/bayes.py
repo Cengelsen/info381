@@ -1,2 +1,0 @@
-#halvor sin
-print("hello")
