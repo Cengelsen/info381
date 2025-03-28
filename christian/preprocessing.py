@@ -11,7 +11,6 @@ from scipy.stats import yeojohnson
 from sklearn.preprocessing import QuantileTransformer
 
 from DensityAwareClustering import DensityAwareClustering
-from GPUDensityCalculation import ScalableDistanceClustering
 
 datapath = "/home/cengelsen/Dokumenter/studier/info381/kode/info381/data/"
 
@@ -84,18 +83,13 @@ def clean_data(filename):
     """
     Handle skewing:
     - amt - positive skew - log transformation
-    - long - negative skew - yeo-johnson
     - city_pop - positive skew - log transformation
-    - merch_long - negative skew - yeo-johnson 
     - dob - slight negative skew - quantile transformation
 
     """
 
     data["amt"] = np.log(data["amt"])
     data["city_pop"] = np.log(data["city_pop"])
-
-    #data["long"], _ = yeojohnson(data["long"])
-    #data["merch_long"], _ = yeojohnson(data["merch_long"])
 
     quantile_transformer = QuantileTransformer(output_distribution='normal', random_state=0)
 
@@ -114,9 +108,6 @@ def clean_data(filename):
     - trans_dayofweek
     - dob_day
     - dob_month
-    - long
-    - merch_long
-
     """
 
     data["trans_minute_sin"] = np.sin(2*np.pi *data["trans_minute"]/60)
@@ -133,17 +124,13 @@ def clean_data(filename):
     data["dob_day_cos"] = np.cos(2*np.pi *data["dob_day"]/31)
     data["dob_month_sin"] = np.sin(2*np.pi *data["dob_month"]/12)
     data["dob_month_cos"] = np.cos(2*np.pi *data["dob_month"]/12)
-    #data["long_sin"] = np.sin(2*np.pi *data["long"]/180)
-    #data["long_cos"] = np.cos(2*np.pi *data["long"]/180)
-    #data["merch_long_sin"] = np.sin(2*np.pi *data["merch_long"]/180)
-    #data["merch_long_cos"] = np.cos(2*np.pi *data["merch_long"]/180)
 
     print("sin/cos transformed...")
 
     # Before your clustering operation
-    data, init_centroids = dac.find_natural_clusters(data)
+    data, centroids = dac.find_natural_clusters(data)
 
-    dac.visualize_clusters(data, init_centroids)
+    #dac.visualize_clusters(data, centroids)
 
     print("clustering done...")
 
@@ -158,6 +145,14 @@ def clean_data(filename):
     for col in cat_data.columns:
         data[col] = le.fit_transform(data[col])
 
+    tobnormalized = ["amt", "city_pop", "trans_year",
+                     "merchant", "city", "state", "category"]
+
+    scaler = StandardScaler()
+
+    for col in tobnormalized:
+        data[col] = scaler.fit_transform(data[col].values.reshape(-1, 1)).flatten()
+        
     print("categorical data encoded...")
 
     print(data.dtypes)
