@@ -1,2 +1,4 @@
 sklearn-env
 drafts/
+__pycache__/
+*.png
