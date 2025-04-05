@@ -1,61 +1,25 @@
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
-from sklearn.cluster import MiniBatchKMeans
-from scipy.stats import yeojohnson
 from sklearn.preprocessing import QuantileTransformer
-
+from sklearn.model_selection import train_test_split, GridSearchCV
 from DensityAwareClustering import DensityAwareClustering
 
 datapath = "/home/cengelsen/Dokumenter/studier/info381/kode/info381/data/"
 
 le = LabelEncoder()
-""" 
-def cluster_geolocations(df, n_clusters=10, random_state=42):
-
-    scaler = StandardScaler()
-
-    # Prepare the data
-    X = df[['lat', 'long', 'merch_long', 'merch_lat']].values
-    X_scaled = scaler.fit_transform(X)
-    
-    # Perform MiniBatchKMeans clustering
-    minibatch_kmeans = MiniBatchKMeans(
-        n_clusters=n_clusters, 
-        random_state=random_state,
-        batch_size=1024,  # Adjust based on memory
-        max_iter=100,     # Limit iterations
-        n_init=5          # Fewer initializations
-    )
-    
-    print(f"Performing clustering with {n_clusters} clusters...")
-
-    # Fit and predict clusters
-    clusters = minibatch_kmeans.fit_predict(X_scaled)
-    
-    print(f"Clustering complete. Found {len(np.unique(clusters))} clusters.")
-
-    # Create result DataFrame
-    df_clustered = df.copy()
-    df_clustered['cluster_id'] = clusters
-        
-    return df_clustered
-"""
 
 def clean_data(filename):
+
+    print("Importing data...")
     data = pd.read_csv(datapath+filename, index_col=0)
+
     dac = DensityAwareClustering(eps=0.5, min_samples=max(5, int(len(data) * 0.01)))
 
-    print("data imported...")
-    # Data cleaning
-
-    # Feature extraction/creation
-    ## splitting time columns
+    print("splitting time columns...")
     data["trans_date_trans_time"] = pd.to_datetime(data["trans_date_trans_time"])
 
     data['trans_minute'] = data['trans_date_trans_time'].dt.minute
@@ -70,46 +34,16 @@ def clean_data(filename):
     data["dob_month"] = data["dob"].dt.month
     data["dob_year"] = data["dob"].dt.year
 
-    print("time data converted...")
 
-    # Feature selection
-    ## Removing irrelevant columns
-    data = data.drop(["cc_num", "unix_time", "trans_date_trans_time",
-                      "first", "last", "street", "dob", "job", "zip",
-                      "trans_num"], axis=1)
-
-    # Feature scaling/normalization
-
-    """
-    Handle skewing:
-    - amt - positive skew - log transformation
-    - city_pop - positive skew - log transformation
-    - dob - slight negative skew - quantile transformation
-
-    """
-
+    print("Handling skewing...")
     data["amt"] = np.log(data["amt"])
     data["city_pop"] = np.log(data["city_pop"])
-
+    
     quantile_transformer = QuantileTransformer(output_distribution='normal', random_state=0)
-
     data["dob_year"] = quantile_transformer.fit_transform(data["dob_year"].values.reshape(-1, 1)).flatten()
 
-    print("skewing handled...")
 
-    """ 
-    kolonne og hvilken normalisering som er nyttigst:
-    
-    Cyclical encoding:
-    - trans_minute
-    - trans_hour
-    - trans_day
-    - trans_month
-    - trans_dayofweek
-    - dob_day
-    - dob_month
-    """
-
+    print("Cyclically encoding features...")
     data["trans_minute_sin"] = np.sin(2*np.pi *data["trans_minute"]/60)
     data["trans_minute_cos"] = np.cos(2*np.pi *data["trans_minute"]/60)
     data["trans_hour_sin"] = np.sin(2*np.pi *data["trans_hour"]/24)
@@ -125,89 +59,83 @@ def clean_data(filename):
     data["dob_month_sin"] = np.sin(2*np.pi *data["dob_month"]/12)
     data["dob_month_cos"] = np.cos(2*np.pi *data["dob_month"]/12)
 
-    print("sin/cos transformed...")
-
-    # Before your clustering operation
     data, centroids = dac.find_natural_clusters(data)
 
+    # uncomment if you want to visualize the clustering results
     #dac.visualize_clusters(data, centroids)
-
-    print("clustering done...")
 
     data = data.drop(["trans_minute", "trans_hour", "trans_day", "trans_month", 
                       "trans_dayofweek", "dob_day", "dob_month", "long", "merch_long",
-                      "lat", "merch_lat"], axis=1)
-
-    print("columns dropped...")
+                      "lat", "merch_lat", "cc_num", "unix_time", "trans_date_trans_time",
+                      "first", "last", "dob", "zip",
+                      "trans_num"], axis=1)
     
     cat_data = data.select_dtypes(include=["object"])
 
+    print("Encoding categorical features...")
     for col in cat_data.columns:
         data[col] = le.fit_transform(data[col])
 
     tobnormalized = ["amt", "city_pop", "trans_year",
-                     "merchant", "city", "state", "category"]
+                     "merchant", "city", "state", "category",
+                     "street", "job",
+                     ]
 
     scaler = StandardScaler()
 
+    print("Scaling features...")
     for col in tobnormalized:
         data[col] = scaler.fit_transform(data[col].values.reshape(-1, 1)).flatten()
         
-    print("categorical data encoded...")
-
-    print(data.dtypes)
-
-    print(data.head())
-
     return data
 
 
-testdata = clean_data("fraudTest.csv")
-traindata = clean_data("fraudTrain.csv")
+data = clean_data("fraud.csv")  
 
-""" sns.set_theme(style="whitegrid")
+X = data.drop("is_fraud", axis=1)
+y = data["is_fraud"]
 
-num_features = len(traindata.columns)
-ncols = 3
-nrows = int(np.ceil(num_features/ncols))
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=(18, 4*nrows))
-
-axes = axes.flatten()
-
-for ax in axes[len(traindata.columns):]:
-    ax.axis('off')
-
-for i, col in enumerate(traindata.columns):
-
-    print(col)
-
-    if i < num_features:  # Ensure we don't go out of bounds
-        sns.histplot(traindata[col], kde=True, ax=axes[i])
-        #axes[i].set_title(col, fontsize=12)
-        axes[i].set_xlabel(col)
-        axes[i].set_ylabel("Count")
-
-for i in range(num_features, len(axes)):
-    fig.delaxes(axes[i])
-
-plt.tight_layout()
-plt.savefig("confusion_mlp_tfidf.png", bbox_inches='tight')
-
- """
-X_train = traindata.drop("is_fraud", axis=1)
-X_test = testdata.drop("is_fraud", axis=1)
-y_train = traindata["is_fraud"]
-y_test = testdata["is_fraud"]
-
-model = RandomForestClassifier(
+""" model = RandomForestClassifier(
     n_estimators=100, 
     random_state=0, 
-    min_samples_leaf=1, 
-    max_depth=5,
-    max_features=None,
+    min_samples_leaf=1,
+    min_samples_split=2, 
+    max_depth=None,
+    max_features=0.3,
+    bootstrap=True,
     n_jobs=6,
 )
+
+# Define parameter grid
+param_grid = {
+    'n_estimators': [100, 125, 150, 175],
+    'max_depth': [None],
+    'max_features': [0.3],
+    'min_samples_split': [2],
+    'min_samples_leaf': [1],
+    'bootstrap': [True],
+    'random_state': [0],
+}
+
+# Setup GridSearchCV
+grid_search = GridSearchCV(
+    estimator=model,
+    param_grid=param_grid,
+    cv=2,                # 5-fold cross-validation
+    n_jobs=1,           # Use all CPU cores
+    verbose=2,           # Print progress
+    scoring='accuracy'   # Metric to optimize
+)
+
+# Run grid search (assuming X_train, y_train are defined)
+grid_search.fit(X_train, y_train)
+
+# Results
+print("Best Parameters:", grid_search.best_params_)
+print("Best Score:", grid_search.best_score_)
+
 
 model.fit(X_train, y_train)
 
@@ -227,4 +155,4 @@ plt.xticks(fontsize=12)
 plt.yticks(fontsize=12)
 
 plt.tight_layout()
-plt.savefig("confusion_matrix.png", bbox_inches='tight')
+plt.savefig("confusion_matrix.png", bbox_inches='tight') """

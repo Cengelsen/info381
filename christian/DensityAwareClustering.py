@@ -4,7 +4,7 @@ from sklearn.cluster import MiniBatchKMeans
 from sklearn.preprocessing import StandardScaler
 from scipy.spatial.distance import cdist
 import matplotlib.pyplot as plt
-
+from scipy.spatial.distance import euclidean
 class DensityAwareClustering:
     def __init__(self, eps=0.5, min_samples=5):
         """
@@ -62,7 +62,7 @@ class DensityAwareClustering:
         labels = kmeans.predict(X_scaled)
         
         # Memory-optimized distance calculation
-        def compute_intra_cluster_distances(X, labels, cluster_id, batch_size=5000):
+        def compute_intra_cluster_distances(X, labels, cluster_id, batch_size=1000):
             cluster_mask = labels == cluster_id
             cluster_points = X[cluster_mask]
             if len(cluster_points) < 2:
@@ -92,7 +92,7 @@ class DensityAwareClustering:
 
         # Cluster validation
         valid_clusters = []
-        print('Filtering clusters based on density and size')
+        print('Filtering clusters based on density and size...')
         for cluster_id in range(initial_clusters):
             cluster_size = np.sum(labels == cluster_id)
             if cluster_size < self.min_samples:
@@ -116,6 +116,17 @@ class DensityAwareClustering:
         merchant_mask = all_coords['type'] == 'merchant'
         buyer_mask = all_coords['type'] == 'buyer'
         
+        print("adding distances")
+        df_clustered['merchant_buyer_distance'] = df_clustered.apply(
+            lambda row: euclidean(
+                (row['merch_lat'], row['merch_long']),
+                (row['lat'], row['long'])
+            ),
+            axis=1
+        )
+
+
+
         df_clustered['merchant_cluster_id'] = new_labels[merchant_mask]
         df_clustered['buyer_cluster_id'] = new_labels[buyer_mask]
         
