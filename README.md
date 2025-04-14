@@ -69,3 +69,30 @@ Grading counts 60 % of total grade and will be based on
 - Experimental setup
 - Analysis of results and discussion
 - Report writing, organization and readability
+
+# SkopeRules instrukser
+
+I terminal:
+
+1. kjør `conda create -n skoperules python=3.5`
+2. kjør `conda activate skoperules`
+3. kjør `pip install skope-rules matplotlib`
+4. kjør `pip freeze` for å sjekke pakkeversjoner
+
+**NB**: Ved å installere skope-rules, burde avhengigetene installeres automatisk. Versjonene av pakkene burde være:
+
+```txt
+Python (>= 2.7 or >= 3.3)
+NumPy (>= 1.10.4)
+SciPy (>= 0.17.0)
+Pandas (>= 0.18.1)
+Scikit-Learn (>= 0.17.1)
+Matplotlib >= 1.1.1 is required.
+```
+
+**NBB**: husk å velge skoperules som interpreter i VSCode
+
+1. i VSCode, trykk ctrl+shift+P
+2. Skriv 'interpreter'
+3. velg "Select Python Interpreter"
+4. velg skoperules
