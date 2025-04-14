@@ -96,3 +96,8 @@ Matplotlib >= 1.1.1 is required.
 2. Skriv 'interpreter'
 3. velg "Select Python Interpreter"
 4. velg skoperules
+
+## Kilder
+
+- [SkopeRules docs](https://skope-rules.readthedocs.io/en/latest/api.html)
+- [SkopeRules github](https://github.com/scikit-learn-contrib/skope-rules)
