@@ -62,7 +62,8 @@ class DensityAwareClustering:
         labels = kmeans.predict(X_scaled)
         
         # Memory-optimized distance calculation
-        def compute_intra_cluster_distances(X, labels, cluster_id, batch_size=1000):
+        # adjust batch size for memory usage
+        def compute_intra_cluster_distances(X, labels, cluster_id, batch_size=4000):
             cluster_mask = labels == cluster_id
             cluster_points = X[cluster_mask]
             if len(cluster_points) < 2:
@@ -72,6 +73,7 @@ class DensityAwareClustering:
             count = 0
             
             # Process in memory-friendly batches
+            #print(f'Processing cluster {cluster_id}...')
             for i in range(0, len(cluster_points), batch_size):
                 batch = cluster_points[i:i+batch_size]
                 
@@ -92,7 +94,7 @@ class DensityAwareClustering:
 
         # Cluster validation
         valid_clusters = []
-        print('Filtering clusters based on density and size...')
+        #print('Filtering clusters based on density and size...')
         for cluster_id in range(initial_clusters):
             cluster_size = np.sum(labels == cluster_id)
             if cluster_size < self.min_samples:
