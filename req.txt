@@ -1,6 +1,7 @@
-pandas
-numpy
-scikit-learn
+pandas>=0.18.1
+numpy>=1.10.4
+scipy>=0.17.0
+scikit-learn>=0.17.1
+matplotlib>=1.1.1
 shap
 imblearn
-matplotlib
