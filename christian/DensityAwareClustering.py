@@ -5,6 +5,8 @@ from sklearn.preprocessing import StandardScaler
 from scipy.spatial.distance import cdist
 import matplotlib.pyplot as plt
 from scipy.spatial.distance import euclidean
+from tqdm import tqdm
+
 class DensityAwareClustering:
     def __init__(self, eps=0.5, min_samples=5):
         """
@@ -63,7 +65,7 @@ class DensityAwareClustering:
         
         # Memory-optimized distance calculation
         # adjust batch size for memory usage
-        def compute_intra_cluster_distances(X, labels, cluster_id, batch_size=4000):
+        def compute_intra_cluster_distances(X, labels, cluster_id, pbar, batch_size=2000):
             cluster_mask = labels == cluster_id
             cluster_points = X[cluster_mask]
             if len(cluster_points) < 2:
@@ -73,7 +75,6 @@ class DensityAwareClustering:
             count = 0
             
             # Process in memory-friendly batches
-            #print(f'Processing cluster {cluster_id}...')
             for i in range(0, len(cluster_points), batch_size):
                 batch = cluster_points[i:i+batch_size]
                 
@@ -89,21 +90,24 @@ class DensityAwareClustering:
                     inter_dists = cdist(batch, cluster_points[:i], metric='euclidean')
                     total_distance += inter_dists.sum()
                     count += inter_dists.size
-                    
+
+            # Update progress bar
+            pbar.update(1)
+
             return total_distance / count if count > 0 else 0
 
         # Cluster validation
         valid_clusters = []
-        #print('Filtering clusters based on density and size...')
-        for cluster_id in range(initial_clusters):
-            cluster_size = np.sum(labels == cluster_id)
-            if cluster_size < self.min_samples:
-                continue
+        with tqdm(total=initial_clusters, desc="Filtering clusters...") as pbar:
+            for cluster_id in range(initial_clusters):
+                cluster_size = np.sum(labels == cluster_id)
+                if cluster_size < self.min_samples:
+                    continue
+                    
+                intra_dist = compute_intra_cluster_distances(X_scaled, labels, cluster_id, pbar)
                 
-            intra_dist = compute_intra_cluster_distances(X_scaled, labels, cluster_id)
-            
-            if intra_dist <= self.eps:
-                valid_clusters.append(cluster_id)
+                if intra_dist <= self.eps:
+                    valid_clusters.append(cluster_id)
         
         # Label remapping
         valid_mask = np.isin(labels, valid_clusters)
