@@ -72,6 +72,8 @@ Grading counts 60 % of total grade and will be based on
 
 # SkopeRules instrukser
 
+Aktiver conda med `source ~/anaconda3/bin/activate` først.
+
 I terminal:
 
 1. kjør `conda create -n skoperules python=3.5`
