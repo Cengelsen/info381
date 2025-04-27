@@ -11,8 +11,7 @@ base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 print("HAHAHA", base_dir)
 
 # Path to data directory
-datapath = os.path.join(base_dir, "data/")
-
+datapath = "/Users/ankelovset/Documents/Master/2. Semester/INFO381-AI/info381/data/"
 le = LabelEncoder()
 
 def clean_data(filename):

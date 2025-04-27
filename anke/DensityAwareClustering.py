@@ -3,8 +3,11 @@ import pandas as pd
 from sklearn.cluster import MiniBatchKMeans
 from sklearn.preprocessing import StandardScaler
 from scipy.spatial.distance import cdist
+import matplotlib  
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 from scipy.spatial.distance import euclidean
+
 class DensityAwareClustering:
     def __init__(self, eps=0.5, min_samples=5):
         """
