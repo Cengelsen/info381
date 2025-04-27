@@ -103,3 +103,23 @@ Matplotlib >= 1.1.1 is required.
 
 - [SkopeRules docs](https://skope-rules.readthedocs.io/en/latest/api.html)
 - [SkopeRules github](https://github.com/scikit-learn-contrib/skope-rules)
+
+
+# To do: 
+
+1. Globale shapley verdier + regelsett + classification report fra nå.
+- [ ] Globale Shapley-verdier.
+- [ ] Regelsett.
+- [ ] Classification report.
+2. Globale shapley verdier + regelsett + classification report etter at vi har skalert ned til 10 features og fjernet skalering.
+- [ ] Globale Shapley verdier.
+- [ ] Regelsett.
+- [ ] Classification report.
+3. Globale shapley verdier + regelsett + classification report etter at vi har redusert til 5 features og fjernet så mye preprosessering som mulig, så tallene som kommer ut er leselige.
+- [ ] Globale Shapley verdier.
+- [ ] Regelsett.
+- [ ] Classification report.
+4. Prototype - se beskrivelsen Bjørnar har lagt ut. 
+4. Prototype - se beskrivelsen Bjørnar har lagt ut.
+- [ ] 2-3 eksempler som viser regler og shapley verdier
+- [ ] Interaktivt script
