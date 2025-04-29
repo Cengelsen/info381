@@ -64,7 +64,7 @@ def clean_data(filename):
     """
 
     print("Finding natural clusters...")
-    #data, centroids = dac.find_natural_clusters(data)
+    data, centroids = dac.find_natural_clusters(data)
 
     # uncomment if you want to visualize the clustering results
     #dac.visualize_clusters(data, centroids)

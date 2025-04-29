@@ -49,8 +49,8 @@ def predict_as_proba(X):
 
 # Pick some explanation baseline
 #X_explain = X_train.sample(1000, random_state=42)
-X_explain = X_train.sample(50, random_state=42)
-X_test_sample = X_test.sample(100, random_state=42)
+X_explain = X_train.sample(100, random_state=42)
+#X_test_sample = X_test.sample(100, random_state=42)
 
 # Use shap.Explainer (not KernelExplainer)
 explainer = shap.KernelExplainer(predict_as_proba, X_explain)
@@ -60,7 +60,7 @@ explainer = shap.KernelExplainer(predict_as_proba, X_explain)
 X_test_sample = X_test.sample(100, random_state=42)
 #shap_values = explainer.shap_values(X_test)
 
-shap_values = explainer.shap_values(X_test_sample)
+shap_values = explainer.shap_values(X_test)
 
 # Plot
 #shap.summary_plot(shap_values, X_test.iloc[:100], show=False)
