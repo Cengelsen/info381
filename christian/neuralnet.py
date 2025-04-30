@@ -1,6 +1,4 @@
-from sklearn.neural_network import MLPClassifier
 from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay, precision_recall_curve
-from preprocessing import clean_data
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
@@ -8,9 +6,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import time
-from imblearn.over_sampling import SMOTE
-from imblearn.under_sampling import RandomUnderSampler
-from imblearn.pipeline import Pipeline
 import shap
 import tensorflow as tf
 import shap
@@ -19,6 +14,12 @@ import matplotlib.pyplot as plt
 import os
 from matplotlib.backends.backend_pdf import PdfPages
 import random
+
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from preprocessing.advanced import clean_data
+
 
 data = clean_data("fraud.csv")
 
