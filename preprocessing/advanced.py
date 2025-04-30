@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from sklearn.preprocessing import QuantileTransformer
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from preprocessing.clustering import DensityAwareClustering
 
@@ -30,8 +31,6 @@ def clean_data(filename):
     data["dob_year"] = data["dob"].dt.year
 
 
-    # Beholder dette inntil videre. Kan være det trengs i senere arbeid
-    """
     print("Handling skewing...")
     data["amt"] = np.log(data["amt"])
     data["city_pop"] = np.log(data["city_pop"])
@@ -54,10 +53,9 @@ def clean_data(filename):
     data["dob_day_cos"] = np.cos(2*np.pi *data["dob_day"]/31)
     data["dob_month_sin"] = np.sin(2*np.pi *data["dob_month"]/12)
     data["dob_month_cos"] = np.cos(2*np.pi *data["dob_month"]/12)
-    """
 
     print("Finding natural clusters...")
-    data, centroids = dac.find_natural_clusters(data)
+    #data, centroids = dac.find_natural_clusters(data)
 
     # uncomment if you want to visualize the clustering results
     #dac.visualize_clusters(data, centroids)
@@ -85,7 +83,6 @@ def clean_data(filename):
     print("Rounding categorical columns...")
     data[["merchant", "category", "street", "city", "state", "job"]] = data[["merchant", "category", "street", "city", "state", "job"]].round(decimals=0)
 
-    """
     tobnormalized = ["amt", "city_pop", "trans_year",
                      "merchant", "city", "state", "category",
                      "street", "job",
@@ -96,7 +93,7 @@ def clean_data(filename):
     print("Scaling features...")
     for col in tobnormalized:
         data[col] = scaler.fit_transform(data[col].values.reshape(-1, 1)).flatten() 
-    """
+
     print(data.head())
 
     return data

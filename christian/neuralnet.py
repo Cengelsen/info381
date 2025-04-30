@@ -20,46 +20,12 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from preprocessing.advanced import clean_data
 
-
+# Importing data
 data = clean_data("fraud.csv")
-
-# additional preprocessing for neural network
-
-
-data["amt"] = np.log(data["amt"])
-data["city_pop"] = np.log(data["city_pop"])
-
-print("Cyclically encoding features...")
-data["trans_minute_sin"] = np.sin(2*np.pi *data["trans_minute"]/60)
-data["trans_minute_cos"] = np.cos(2*np.pi *data["trans_minute"]/60)
-data["trans_hour_sin"] = np.sin(2*np.pi *data["trans_hour"]/24)
-data["trans_hour_cos"] = np.cos(2*np.pi *data["trans_hour"]/24)
-data["trans_day_sin"] = np.sin(2*np.pi *data["trans_day"]/31)
-data["trans_day_cos"] = np.cos(2*np.pi *data["trans_day"]/31)
-data["trans_month_sin"] = np.sin(2*np.pi *data["trans_month"]/12)
-data["trans_month_cos"] = np.cos(2*np.pi *data["trans_month"]/12)
-data["trans_dayofweek_sin"] = np.sin(2*np.pi *data["trans_dayofweek"]/7)
-data["trans_dayofweek_cos"] = np.cos(2*np.pi *data["trans_dayofweek"]/7)
-data["dob_day_sin"] = np.sin(2*np.pi *data["dob_day"]/31)
-data["dob_day_cos"] = np.cos(2*np.pi *data["dob_day"]/31)
-data["dob_month_sin"] = np.sin(2*np.pi *data["dob_month"]/12)
-data["dob_month_cos"] = np.cos(2*np.pi *data["dob_month"]/12)
-
-# normalize data
-
-tobnormalized = ['cc_num', 'merchant', 'category','gender', 'street', 'city',
-       'state', 'zip', 'job', 'trans_num',
-       'merchant_buyer_distance', 'merchant_cluster_id', 'buyer_cluster_id']
-
-scaler = StandardScaler()
-
-print("Scaling features...")
-for col in tobnormalized:
-    data[col] = scaler.fit_transform(data[col].values.reshape(-1, 1)).flatten() 
-
 
 data = data.sample(frac=1).reset_index(drop=True)
 
+# Splitting data
 X = data.drop("is_fraud", axis=1)
 y = data["is_fraud"]
 
@@ -79,7 +45,6 @@ nn.compile(optimizer='adam',
            metrics=['accuracy'])
 
 nn.fit(X_train, y_train, epochs=10, batch_size=32)
-
 
 
 # Sample test data (limit to a reasonable number to prevent memory issues)
@@ -174,88 +139,3 @@ plt.savefig("shap_beeswarm_fraud.png")
 plt.close()
 
 print("All SHAP plots saved to disk.")
-
-
-""" 
-shap_values_class_1 = np.squeeze(shap_values)  # Remove singleton dimension
-
-print("\nGenerating plots for class 1 (fraud)...")
-print("\nSummary plot")
-shap.summary_plot(
-    shap_values_class_1, 
-    X_test, 
-    feature_names=feature_names, 
-    max_display=10, 
-    plot_size=(12, 10)
-)
-
-explanation = shap.Explanation(
-    values=shap_values_class_1,
-    base_values=np.repeat(explainer.expected_value[0], X_test.shape[0]),
-    data=X_test.values,
-    feature_names=feature_names
-)
-
-print("\nBeeswarm plot")
-shap.plots.beeswarm(
-    explanation, 
-    max_display=10, 
-    plot_size=(12, 10)
-)
-
-print("\nGenerating plots for class 0 (non-fraud)")
-print("\nSummary plot")
-shap.summary_plot(
-    shap_values_class_0, 
-    X_test, 
-    feature_names=feature_names, 
-    max_display=10, 
-    plot_size=(12, 10)
-)
-
-explanation = shap.Explanation(
-    values=shap_values_class_0,
-    base_values=np.repeat(explainer.expected_value[0], X_test.shape[0]),
-    data=X_test.values,
-    feature_names=feature_names
-)
-
-print("\nBeeswarm plot")
-shap.plots.beeswarm(
-    explanation, 
-    max_display=10, 
-    plot_size=(12, 10)
-)
-
-"""
-
-""" 
-print("\nGenerating summary plot...")
-print("\nGenerating summary plot for class 1 (fraud)...")
-shap.summary_plot(
-    shap_values[1], 
-    features=X_test, 
-    feature_names=feature_names, 
-    max_display=10, 
-    plot_size=(12, 10)
-)
-
-print("\nGenerating summary plot for class 0 (non-fraud)...")
-shap.summary_plot(shap_values[0], features=X_test, feature_names=feature_names, max_display=10, plot_size=(12, 10))
-
-# explanation for the beeswarm
-explanation = shap.Explanation(
-    values=np.array(shap_values[1]),
-    base_values=explainer.expected_value[1].numpy(),
-    data=X_test.values,
-    feature_names=feature_names
-)
-
-print("\nGenerating beeswarm plot...")
-print("\nGenerating beeswarm plot for class 1 (fraud)...")
-shap.plots.beeswarm(shap_values[1], max_display=10, plot_size=(12, 10))
-
-print("\nGenerating beeswarm plot for class 0 (non-fraud)...")
-shap.plots.beeswarm(explanation, max_display=10, plot_size=(12, 10))
-
- """
