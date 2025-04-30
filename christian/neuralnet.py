@@ -1,10 +1,7 @@
 from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay, precision_recall_curve
-from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 import time
 import shap
 import tensorflow as tf
@@ -46,6 +43,34 @@ nn.compile(optimizer='adam',
 
 nn.fit(X_train, y_train, epochs=10, batch_size=32)
 
+
+#----------------------------------------------------------------------------------
+# CONFUSION MATRIX
+#----------------------------------------------------------------------------------
+
+# Get probability predictions
+y_pred_proba = nn.predict(X_test)
+
+# Convert probabilities to binary predictions (0 or 1) using threshold of 0.5
+y_pred_binary = (y_pred_proba > 0.5).astype(int)
+
+# Flatten the prediction array to match the shape of y_test
+y_pred_binary = y_pred_binary.flatten()
+
+plt.figure(figsize=(10, 7))
+cm = confusion_matrix(y_test, y_pred_binary)
+ConfusionMatrixDisplay(cm, display_labels=["Not Fraud", "Fraud"]).plot(cmap="Blues")
+plt.title('Confusion Matrix')
+plt.savefig("confusion_matrix.png")
+plt.close()
+
+# Print classification report
+print("\nClassification Report:")
+print(classification_report(y_test, y_pred_binary))
+
+#----------------------------------------------------------------------------------
+# CALCULATING SHAPLEY VALUES
+#----------------------------------------------------------------------------------
 
 # Sample test data (limit to a reasonable number to prevent memory issues)
 background = X_test.sample(min(1000, len(X_test)))
