@@ -85,17 +85,6 @@ def clean_data(filename):
     print("Rounding categorical columns...")
     data[["merchant", "category", "street", "city", "state", "job"]] = data[["merchant", "category", "street", "city", "state", "job"]].round(decimals=0)
 
-    tobnormalized = ["amt", "city_pop", "trans_year",
-                     "merchant", "city", "state", "category",
-                     "street", "job",
-                     ]
-
-    scaler = StandardScaler()
-
-    print("Scaling features...")
-    for col in tobnormalized:
-        data[col] = scaler.fit_transform(data[col].values.reshape(-1, 1)).flatten() 
-
     print(data.head())
 
     return data

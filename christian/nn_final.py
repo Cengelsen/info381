@@ -9,11 +9,14 @@ from sklearn.model_selection import train_test_split
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Input
-from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, classification_report
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, classification_report, roc_curve, roc_auc_score, precision_recall_curve
 import matplotlib.pyplot as plt
 from sklearn.neural_network import MLPClassifier
 from imblearn.pipeline import Pipeline
 from sklearn.model_selection import GridSearchCV
+from sklearn.utils import class_weight
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import StandardScaler
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1' 
 
@@ -29,11 +32,14 @@ X = data.drop("is_fraud", axis=1)
 y = data["is_fraud"]
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=42, stratify=y)
 
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
 
 # SMOTE Sampling with Grid Search
 
 ## Define the pipeline
-
+""" 
 pipeline = Pipeline([
     ('smote', SMOTE(random_state=42)),
     ('classifier', MLPClassifier(random_state=42))
@@ -70,72 +76,50 @@ grid_search.fit(X_train, y_train)
 print("\nBest parameters found:")
 print(grid_search.best_params_)
 print(f"Best score: {grid_search.best_score_:.4f}")
-
+ """
 
 """ {'classifier__activation': 'relu', 'classifier__batch_size': 32, 'classifier__hidden_layer_sizes': (32, 16), 'classifier__learning_rate_init': 0.001, 'smote__k_neighbors': 3, 'smote__sampling_strategy': 0.1} """
 
-# Apply SMOTE to the training data only
-print("Applying SMOTE oversampling...")
+
 smote = SMOTE(
-    random_state=42, 
-    sampling_strategy=grid_search.best_params_['smote__sampling_strategy'],
-    k_neighbors=grid_search.best_params_['smote__k_neighbors'],
+    random_state=42,
 )
 
-X_train_smote, y_train_smote = smote.fit_resample(X_train, y_train)
+X_train_smote, y_train_smote = smote.fit_resample(X_train, y_train) 
 
 # Create and train neural network
 nn = tf.keras.models.Sequential([
-    tf.keras.layers.Dense(grid_search.best_params_['classifier__hidden_layer_sizes'][0][0], activation='relu', input_shape=X_train.shape[1:]),
-    tf.keras.layers.Dense(grid_search.best_params_['classifier__hidden_layer_sizes'][0][1], activation='relu'),
-    tf.keras.layers.Dense(1, activation='sigmoid')
+    tf.keras.layers.Dense(32, activation='relu', input_shape=X_train.shape[1:]),
+    tf.keras.layers.Dense(16, activation='relu'),
+    tf.keras.layers.Dense(1, activation='sigmoid'),
 ])
 
-nn.compile(optimizer='adam',
-           loss='binary_crossentropy',
-           metrics=['accuracy'])
+nn.compile(
+    optimizer='adam',
+    loss='binary_crossentropy',
+    metrics=['accuracy', 
+             tf.keras.metrics.Precision(name='precision'), 
+             tf.keras.metrics.Recall(name='recall'),
+             tf.keras.metrics.AUC(name='auc')]
+)
 
-nn.fit(X_train_smote, y_train_smote, epochs=10, batch_size=32)
+# --- 7. Train Model ---
+history = nn.fit(
+    X_train_smote, y_train_smote,
+    epochs=5,
+    batch_size=64,
+    validation_split=0.1,
+    verbose=2
+)
 
-# Get probability predictions
-y_pred_proba = nn.predict(X_test)
 
-# Convert probabilities to binary predictions (0 or 1) using threshold of 0.5
-y_pred_binary = (y_pred_proba > 0.5).astype(int)
+y_pred_prob = nn.predict(X_test).flatten()
+threshold = 0.2  # Try different values
+y_pred = (y_pred_prob >= threshold).astype(int)
+print(classification_report(y_test, y_pred, digits=4))
 
-plt.figure(figsize=(10, 7))
-cm = confusion_matrix(y_test, y_pred_binary)
+
+cm = confusion_matrix(y_test, y_pred)
 ConfusionMatrixDisplay(cm, display_labels=["Not Fraud", "Fraud"]).plot(cmap="Blues")
-plt.title('Confusion Matrix with SMOTE')
-plt.savefig("confusion_matrix_smote.png")
-plt.close()
-
-# Print classification report
-print("\nClassification Report:")
-print(classification_report(y_test, y_pred_binary))
-
-
-nn.fit(X_train, y_train, epochs=10, batch_size=32)
-
-# Get probability predictions
-y_pred_proba = nn.predict(X_test)
-
-# Convert probabilities to binary predictions (0 or 1) using threshold of 0.5
-y_pred_binary = (y_pred_proba > 0.5).astype(int)
-
-plt.figure(figsize=(10, 7))
-cm = confusion_matrix(y_test, y_pred_binary)
-ConfusionMatrixDisplay(cm, display_labels=["Not Fraud", "Fraud"]).plot(cmap="Blues")
-plt.title('Confusion Matrix without SMOTE')
-plt.savefig("confusion_matrix_no_smote.png")
-plt.close()
-
-# Print classification report
-print("\nClassification Report:")
-print(classification_report(y_test, y_pred_binary))
-
-# Training final model with best hyperparameters
-
-# Evaluating final model on test set
-
-# Saving final model
+plt.show()
+plt.savefig("confusion_matrix.png")
