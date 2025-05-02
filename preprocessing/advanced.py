@@ -31,12 +31,14 @@ def clean_data(filename):
     data["dob_year"] = data["dob"].dt.year
 
 
+    """     
     print("Handling skewing...")
     data["amt"] = np.log(data["amt"])
     data["city_pop"] = np.log(data["city_pop"])
     
     quantile_transformer = QuantileTransformer(output_distribution='normal', random_state=0)
-    data["dob_year"] = quantile_transformer.fit_transform(data["dob_year"].values.reshape(-1, 1)).flatten()
+    data["dob_year"] = quantile_transformer.fit_transform(data["dob_year"].values.reshape(-1, 1)).flatten() 
+    """
 
     print("Cyclically encoding features...")
     data["trans_minute_sin"] = np.sin(2*np.pi *data["trans_minute"]/60)
