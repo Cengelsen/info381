@@ -1,6 +1,7 @@
 # Imports
 import sys
 import os
+import numpy as np
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from preprocessing.advanced import clean_data
 from imblearn.over_sampling import SMOTE
@@ -17,6 +18,7 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.utils import class_weight
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
+import shap
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1' 
 
@@ -89,7 +91,8 @@ X_train_smote, y_train_smote = smote.fit_resample(X_train, y_train)
 
 # Create and train neural network
 nn = tf.keras.models.Sequential([
-    tf.keras.layers.Dense(32, activation='relu', input_shape=X_train.shape[1:]),
+    tf.keras.Input(shape=X_train.shape[1:]),
+    tf.keras.layers.Dense(32, activation='relu'),
     tf.keras.layers.Dense(16, activation='relu'),
     tf.keras.layers.Dense(1, activation='sigmoid'),
 ])
@@ -120,6 +123,109 @@ print(classification_report(y_test, y_pred, digits=4))
 
 
 cm = confusion_matrix(y_test, y_pred)
-ConfusionMatrixDisplay(cm, display_labels=["Not Fraud", "Fraud"]).plot(cmap="Blues")
-plt.show()
+disp = ConfusionMatrixDisplay(cm, display_labels=["Not Fraud", "Fraud"]).plot(cmap="Blues")
+disp.plot()
 plt.savefig("confusion_matrix.png")
+plt.close()
+
+
+#----------------------------------------------------------------------------------
+# CALCULATING SHAPLEY VALUES
+#----------------------------------------------------------------------------------
+
+print(type(X_test))
+
+background = X_train_smote[np.random.choice(X_train_smote.shape[0], 1000, replace=False)]
+
+print(f"Using {len(background)} samples for SHAP analysis")
+
+# Initialize SHAP explainer with TensorFlow model
+print("Initializing SHAP DeepExplainer...")
+explainer = shap.DeepExplainer(nn, background)
+
+# Calculate SHAP values
+print("Calculating SHAP values...")
+shap_values = explainer.shap_values(X_test)
+
+
+print(f"SHAP values type: {type(shap_values)}")
+print(f"Length of SHAP list: {len(shap_values)}")
+print(f"Shape of first element: {np.array(shap_values[0]).shape}")
+print(f"Shape of second element: {np.array(shap_values[1]).shape}")
+
+
+#----------------------------------------------------------------------------------
+# PLOTS OF GLOBAL SHAPLEY VALUES
+#----------------------------------------------------------------------------------
+
+# After calculating SHAP values
+print("Reshaping SHAP values for plotting...")
+
+# Check the actual structure of the returned SHAP values
+if isinstance(shap_values, list):
+    # If DeepExplainer returned a list of arrays (one per class)
+    shap_values_class_0 = shap_values[0]
+    shap_values_class_1 = shap_values[1]
+else:
+    # If DeepExplainer returned a single array
+    # For binary classification with a sigmoid output, the SHAP values
+    # represent the positive class (fraud)
+    shap_values_class_1 = shap_values
+    # For the negative class, we can take the negative of the SHAP values
+    shap_values_class_0 = -shap_values
+
+# Ensure proper shape: should match X_test's shape
+if shap_values_class_0.shape != X_test.shape:
+    shap_values_class_0 = np.squeeze(shap_values_class_0)
+if shap_values_class_1.shape != X_test.shape:
+    shap_values_class_1 = np.squeeze(shap_values_class_1)
+
+feature_names = X.columns.tolist()
+
+# Generate summary plots
+print("\nGenerating summary plot for non-fraud (class 0)...")
+plt.figure(figsize=(12, 10))
+shap.summary_plot(shap_values_class_0, X_test, feature_names=feature_names, 
+                 max_display=10, show=False, plot_type="bar")
+plt.tight_layout()
+plt.savefig("shap_summary_nonfraud.png")
+plt.close()
+
+print("\nGenerating summary plot for fraud (class 1)...")
+plt.figure(figsize=(12, 10))
+shap.summary_plot(shap_values_class_1, X_test, feature_names=feature_names, 
+                 max_display=10, show=False)
+plt.tight_layout()
+plt.savefig("shap_summary_fraud.png")
+plt.close()
+
+# Generate beeswarm plots
+print("\nGenerating beeswarm plot for non-fraud (class 0)...")
+plt.figure(figsize=(12, 10))
+explanation_nonfraud = shap.Explanation(
+    values=shap_values_class_0,
+    base_values=np.repeat(explainer.expected_value[0] if isinstance(explainer.expected_value, list) 
+                          else explainer.expected_value, X_test.shape[0]),
+    data=X_test,
+    feature_names=feature_names
+)
+shap.plots.beeswarm(explanation_nonfraud, max_display=10, show=False)
+plt.tight_layout()
+plt.savefig("shap_beeswarm_nonfraud.png")
+plt.close()
+
+print("\nGenerating beeswarm plot for fraud (class 1)...")
+plt.figure(figsize=(12, 10))
+explanation_fraud = shap.Explanation(
+    values=shap_values_class_1,
+    base_values=np.repeat(explainer.expected_value[1] if isinstance(explainer.expected_value, list) 
+                         else explainer.expected_value, X_test.shape[0]),
+    data=X_test,
+    feature_names=feature_names
+)
+shap.plots.beeswarm(explanation_fraud, max_display=10, show=False)
+plt.tight_layout()
+plt.savefig("shap_beeswarm_fraud.png")
+plt.close()
+
+print("All SHAP plots saved to disk.")
