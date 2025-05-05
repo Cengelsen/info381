@@ -9,6 +9,7 @@ import numpy as np
 # Load the dataset 
 data = clean_data("fraud.csv")
 
+
 # Splitting features and target variable
 X = data.drop("is_fraud", axis=1)
 y = data["is_fraud"]
