@@ -123,3 +123,17 @@ Matplotlib >= 1.1.1 is required.
 4. Prototype - se beskrivelsen Bjørnar har lagt ut.
 - [ ] 2-3 eksempler som viser regler og shapley verdier
 - [ ] Interaktivt script
+
+### Anchor resultater fra nn
+
+Most common anchor rules:
+('amt <= 0.17', 'trans_hour_cos <= -0.35'): 193 times
+('amt <= 0.17', 'trans_hour_cos <= 1.02'): 138 times
+('amt <= 2.74', 'trans_hour_cos <= 1.02'): 28 times
+('amt <= 2.74', 'trans_hour_cos <= -0.35'): 21 times
+('amt <= 0.17', 'trans_hour_sin <= -0.52'): 7 times
+('amt <= 0.17', 'trans_hour_sin <= -0.52', 'category <= 0.20'): 6 times
+('category > 1.12', 'trans_hour_cos <= -0.35'): 5 times
+('category > 1.12', 'amt <= 2.74'): 5 times
+('category > 0.20', 'trans_hour_cos <= -0.35'): 5 times
+('amt <= 0.17', 'trans_minute_sin > 0.94', 'trans_dayofweek <= -0.90'): 4 times

@@ -19,6 +19,8 @@ from sklearn.utils import class_weight
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
 import shap
+from tqdm import tqdm
+from sklearn.utils import shuffle
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1' 
 
@@ -194,7 +196,7 @@ plt.close()
 print("\nGenerating summary plot for fraud (class 1)...")
 plt.figure(figsize=(12, 10))
 shap.summary_plot(shap_values_class_1, X_test, feature_names=feature_names, 
-                 max_display=10, show=False)
+                 max_display=10, show=False, plot_type="bar")
 plt.tight_layout()
 plt.savefig("shap_summary_fraud.png")
 plt.close()
@@ -229,3 +231,49 @@ plt.savefig("shap_beeswarm_fraud.png")
 plt.close()
 
 print("All SHAP plots saved to disk.")
+
+#----------------------------------------------------------------------------------
+# CALCULATING ANCHOR VALUES
+#----------------------------------------------------------------------------------
+
+from alibi.explainers import AnchorTabular
+
+def predict_fn(x):
+    # Returns predicted class labels
+    return (nn.predict(x, verbose=0) >= 0.5).astype(int).flatten()
+
+
+print(feature_names)
+
+explainer = AnchorTabular(predict_fn, feature_names)
+explainer.fit(X_train_smote)
+
+instance = X_test[100]
+explanation = explainer.explain(instance, verbose=True, threshold=0.80)
+
+print("Anchor explanation:")
+print(explanation)
+
+print("\n--- Anchor Explanation ---")
+print(f"Anchor rule: {' AND '.join(explanation.anchor)}")
+
+X_test_sample = shuffle(X_test, random_state=42)
+
+from collections import Counter
+
+anchors = []
+for i in tqdm(range(len(X_test_sample[0:499]))):  # or len(X_test)
+    instance = X_test_sample[i]
+    explanation = explainer.explain(
+        instance, 
+        threshold=0.80, 
+        verbose=False,
+        tau=0.1,
+        batch_size=1024,
+        )
+    anchors.append(tuple(explanation.anchor))  # store as tuple for counting
+
+anchor_counts = Counter(anchors)
+print("Most common anchor rules:")
+for rule, count in anchor_counts.most_common(10):
+    print(f"{rule}: {count} times")
