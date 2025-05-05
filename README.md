@@ -124,7 +124,7 @@ Matplotlib >= 1.1.1 is required.
 - [ ] 2-3 eksempler som viser regler og shapley verdier
 - [ ] Interaktivt script
 
-### Anchor resultater fra nn
+### Anchor resultater fra nn advanced
 
 Most common anchor rules:
 ('amt <= 0.17', 'trans_hour_cos <= -0.35'): 193 times

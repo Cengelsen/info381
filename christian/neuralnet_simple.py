@@ -1,89 +1,95 @@
-from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay, precision_recall_curve
-from sklearn.model_selection import train_test_split
-import matplotlib.pyplot as plt
-import numpy as np
-import time
-import shap
-import tensorflow as tf
-import shap
-import numpy as np
-import matplotlib.pyplot as plt
-import os
-from matplotlib.backends.backend_pdf import PdfPages
-import random
-from sklearn.preprocessing import StandardScaler
-
+# Imports
 import sys
+import os
+import numpy as np
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
 from preprocessing.simple import clean_data
+from imblearn.over_sampling import SMOTE
+from collections import Counter
+from sklearn.model_selection import train_test_split
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Input
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, classification_report
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import StandardScaler
+import shap
+from tqdm import tqdm
+from sklearn.utils import shuffle
 
-# Importing data
-data,_= clean_data("fraud.csv")
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1' 
 
-tobnormalized = [
-    "amt", "city_pop", "trans_year",
-    "merchant", "city", "state", 
-    "category", "street", "job",
-    ]
+# Data loading
 
-scaler = StandardScaler()
+print("Importing and cleaning data...")
+data = clean_data("fraud.csv")
+data = data[0].sample(frac=1).reset_index(drop=True)
 
-print("Scaling features...")
-for col in tobnormalized:
-    data[col] = scaler.fit_transform(data[col].values.reshape(-1, 1)).flatten() 
-
-data = data.sample(frac=1).reset_index(drop=True)
-
-# Splitting data
+# train test splitting
+print("Splitting data...")
 X = data.drop("is_fraud", axis=1)
 y = data["is_fraud"]
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=42, stratify=y)
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=42)
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
 
-feature_names = X_train.columns.tolist()
+# SMOTE Sampling
+smote = SMOTE(
+    random_state=42,
+)
+
+X_train_smote, y_train_smote = smote.fit_resample(X_train, y_train) 
 
 # Create and train neural network
 nn = tf.keras.models.Sequential([
-    tf.keras.layers.Dense(64, activation='relu', input_shape=X_train.shape[1:]),
-    tf.keras.layers.Dense(64, activation='relu'),
-    tf.keras.layers.Dense(1, activation='sigmoid')
+    tf.keras.Input(shape=X_train.shape[1:]),
+    tf.keras.layers.Dense(32, activation='relu'),
+    tf.keras.layers.Dense(16, activation='relu'),
+    tf.keras.layers.Dense(1, activation='sigmoid'),
 ])
 
-nn.compile(optimizer='adam',
-           loss='binary_crossentropy',
-           metrics=['accuracy'])
+nn.compile(
+    optimizer='adam',
+    loss='binary_crossentropy',
+    metrics=['accuracy', 
+             tf.keras.metrics.Precision(name='precision'), 
+             tf.keras.metrics.Recall(name='recall'),
+             tf.keras.metrics.AUC(name='auc')]
+)
 
-nn.fit(X_train, y_train, epochs=10, batch_size=32)
+# --- 7. Train Model ---
+history = nn.fit(
+    X_train_smote, y_train_smote,
+    epochs=5,
+    batch_size=64,
+    validation_split=0.1,
+    verbose=2
+)
 
 
-#----------------------------------------------------------------------------------
-# CONFUSION MATRIX
-#----------------------------------------------------------------------------------
+y_pred_prob = nn.predict(X_test).flatten()
+threshold = 0.2  # Try different values
+y_pred = (y_pred_prob >= threshold).astype(int)
+print(classification_report(y_test, y_pred, digits=4))
 
-# Get probability predictions
-y_pred_proba = nn.predict(X_test)
 
-# Convert probabilities to binary predictions (0 or 1) using threshold of 0.5
-y_pred_binary = (y_pred_proba > 0.5).astype(int)
-
-plt.figure(figsize=(10, 7))
-cm = confusion_matrix(y_test, y_pred_binary)
-ConfusionMatrixDisplay(cm, display_labels=["Not Fraud", "Fraud"]).plot(cmap="Blues")
-plt.title('Confusion Matrix')
+cm = confusion_matrix(y_test, y_pred)
+disp = ConfusionMatrixDisplay(cm, display_labels=["Not Fraud", "Fraud"]).plot(cmap="Blues")
+disp.plot()
 plt.savefig("confusion_matrix.png")
 plt.close()
 
-# Print classification report
-print("\nClassification Report:")
-print(classification_report(y_test, y_pred_binary))
 
 #----------------------------------------------------------------------------------
 # CALCULATING SHAPLEY VALUES
 #----------------------------------------------------------------------------------
 
-# Sample test data (limit to a reasonable number to prevent memory issues)
-background = X_test.sample(min(1000, len(X_test)))
+print(type(X_test))
+
+background = X_train_smote[np.random.choice(X_train_smote.shape[0], 1000, replace=False)]
+
 print(f"Using {len(background)} samples for SHAP analysis")
 
 # Initialize SHAP explainer with TensorFlow model
@@ -92,7 +98,7 @@ explainer = shap.DeepExplainer(nn, background)
 
 # Calculate SHAP values
 print("Calculating SHAP values...")
-shap_values = explainer.shap_values(X_test.values)
+shap_values = explainer.shap_values(X_test)
 
 
 print(f"SHAP values type: {type(shap_values)}")
@@ -127,6 +133,8 @@ if shap_values_class_0.shape != X_test.shape:
 if shap_values_class_1.shape != X_test.shape:
     shap_values_class_1 = np.squeeze(shap_values_class_1)
 
+feature_names = X.columns.tolist()
+
 # Generate summary plots
 print("\nGenerating summary plot for non-fraud (class 0)...")
 plt.figure(figsize=(12, 10))
@@ -139,7 +147,7 @@ plt.close()
 print("\nGenerating summary plot for fraud (class 1)...")
 plt.figure(figsize=(12, 10))
 shap.summary_plot(shap_values_class_1, X_test, feature_names=feature_names, 
-                 max_display=10, show=False)
+                 max_display=10, show=False, plot_type="bar")
 plt.tight_layout()
 plt.savefig("shap_summary_fraud.png")
 plt.close()
@@ -151,7 +159,7 @@ explanation_nonfraud = shap.Explanation(
     values=shap_values_class_0,
     base_values=np.repeat(explainer.expected_value[0] if isinstance(explainer.expected_value, list) 
                           else explainer.expected_value, X_test.shape[0]),
-    data=X_test.values,
+    data=X_test,
     feature_names=feature_names
 )
 shap.plots.beeswarm(explanation_nonfraud, max_display=10, show=False)
@@ -165,7 +173,7 @@ explanation_fraud = shap.Explanation(
     values=shap_values_class_1,
     base_values=np.repeat(explainer.expected_value[1] if isinstance(explainer.expected_value, list) 
                          else explainer.expected_value, X_test.shape[0]),
-    data=X_test.values,
+    data=X_test,
     feature_names=feature_names
 )
 shap.plots.beeswarm(explanation_fraud, max_display=10, show=False)
@@ -174,3 +182,49 @@ plt.savefig("shap_beeswarm_fraud.png")
 plt.close()
 
 print("All SHAP plots saved to disk.")
+
+#----------------------------------------------------------------------------------
+# CALCULATING ANCHOR VALUES
+#----------------------------------------------------------------------------------
+
+from alibi.explainers import AnchorTabular
+
+def predict_fn(x):
+    # Returns predicted class labels
+    return (nn.predict(x, verbose=0) >= 0.5).astype(int).flatten()
+
+
+print(feature_names)
+
+explainer = AnchorTabular(predict_fn, feature_names)
+explainer.fit(X_train_smote)
+
+instance = X_test[100]
+explanation = explainer.explain(instance, verbose=True, threshold=0.80)
+
+print("Anchor explanation:")
+print(explanation)
+
+print("\n--- Anchor Explanation ---")
+print(f"Anchor rule: {' AND '.join(explanation.anchor)}")
+
+X_test_sample = shuffle(X_test, random_state=42)
+
+from collections import Counter
+
+anchors = []
+for i in tqdm(range(len(X_test_sample[0:499]))):  # or len(X_test)
+    instance = X_test_sample[i]
+    explanation = explainer.explain(
+        instance, 
+        threshold=0.80, 
+        verbose=False,
+        tau=0.1,
+        batch_size=1024,
+        )
+    anchors.append(tuple(explanation.anchor))  # store as tuple for counting
+
+anchor_counts = Counter(anchors)
+print("Most common anchor rules:")
+for rule, count in anchor_counts.most_common(10):
+    print(f"{rule}: {count} times")
