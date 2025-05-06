@@ -8,7 +8,7 @@ from DensityAwareClustering import DensityAwareClustering
 # Base directory.
 base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
-print("HAHAHA", base_dir)
+print(base_dir)
 
 # Path to data directory
 datapath = "/Users/ankelovset/Documents/Master/2. Semester/INFO381-AI/info381/data/"
