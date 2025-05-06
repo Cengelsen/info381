@@ -1,16 +1,9 @@
 import pandas as pd
-import numpy as np
 from sklearn.preprocessing import LabelEncoder
 
 datapath = "/home/cengelsen/Dokumenter/studier/info381/kode/info381/data/"
 
 le = LabelEncoder()
-
-# de topp 10 viktigste featureene fra shap
-# ingen syklisk enkoding
-# label encoding med oversettelse i ettertid
-# ingen clustering
-# ingen skalering
 
 def clean_data(filename):
 

@@ -1,7 +1,6 @@
 sklearn-env
 drafts/
 __pycache__/
-*.png
 .DS_Store
 
 shap_plots

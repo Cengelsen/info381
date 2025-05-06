@@ -124,6 +124,21 @@ Matplotlib >= 1.1.1 is required.
 - [ ] 2-3 eksempler som viser regler og shapley verdier
 - [ ] Interaktivt script
 
+
+### Anchor resultater fra XGBoost advanced
+
+Anchor 1: street > 494.00 AND amt > 86.44 AND trans_hour_cos > -0.26 AND category > 2.00 AND trans_month <= 2.00 AND trans_month_cos > 0.00
+Precision 1: 0.96
+Coverage 1: 0.03
+----------------------
+Anchor 2: trans_minute <= 54.00 AND amt > 86.44 AND trans_hour_cos > -0.26
+Precision 2: 0.86
+Coverage 2: 0.37
+----------------------
+Anchor 3: trans_month <= 12.00 AND amt > 86.44
+Precision 3: 0.78
+Coverage 3: 0.50
+
 ### Anchor resultater fra nn advanced
 
 Most common anchor rules:

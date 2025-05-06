@@ -1,8 +1,6 @@
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import QuantileTransformer
-from sklearn.preprocessing import LabelEncoder, StandardScaler
-from preprocessing.clustering import DensityAwareClustering
+from sklearn.preprocessing import LabelEncoder
 
 datapath = "/home/cengelsen/Dokumenter/studier/info381/kode/info381/data/"
 
@@ -12,8 +10,6 @@ def clean_data(filename):
 
     print("Importing data...")
     data = pd.read_csv(datapath+filename, index_col=0)
-
-    dac = DensityAwareClustering(eps=0.5, min_samples=max(5, int(len(data) * 0.01)))
 
     print("splitting time columns...")
     data["trans_date_trans_time"] = pd.to_datetime(data["trans_date_trans_time"])
@@ -30,16 +26,6 @@ def clean_data(filename):
     data["dob_month"] = data["dob"].dt.month
     data["dob_year"] = data["dob"].dt.year
 
-
-    """     
-    print("Handling skewing...")
-    data["amt"] = np.log(data["amt"])
-    data["city_pop"] = np.log(data["city_pop"])
-    
-    quantile_transformer = QuantileTransformer(output_distribution='normal', random_state=0)
-    data["dob_year"] = quantile_transformer.fit_transform(data["dob_year"].values.reshape(-1, 1)).flatten() 
-    """
-
     print("Cyclically encoding features...")
     data["trans_minute_sin"] = np.sin(2*np.pi *data["trans_minute"]/60)
     data["trans_minute_cos"] = np.cos(2*np.pi *data["trans_minute"]/60)
@@ -55,12 +41,6 @@ def clean_data(filename):
     data["dob_day_cos"] = np.cos(2*np.pi *data["dob_day"]/31)
     data["dob_month_sin"] = np.sin(2*np.pi *data["dob_month"]/12)
     data["dob_month_cos"] = np.cos(2*np.pi *data["dob_month"]/12)
-
-    print("Finding natural clusters...")
-    #data, centroids = dac.find_natural_clusters(data)
-
-    # uncomment if you want to visualize the clustering results
-    #dac.visualize_clusters(data, centroids)
 
     print("Dropping columns...")
     data = data.drop(["long", "merch_long", "lat", 
